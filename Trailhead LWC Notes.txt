@@ -1,0 +1,136 @@
+import { LightningElement, api, wire } from 'lwc';
+import { getRecord } from 'lightning/uiRecordApi';
+import ACCOUNT_NAME_FIELD from '@salesforce/schema/Account.Name';
+export default class WireGetRecordProperty extends LightningElement {
+    @api recordId;
+    @wire(getRecord, { recordId: '$recordId', fields: [ACCOUNT_NAME_FIELD] })
+    account;
+}
+
+import { LightningElement, api, wire } from 'lwc';
+import { getRecord } from 'lightning/uiRecordApi';
+import ACCOUNT_NAME_FIELD from '@salesforce/schema/Account.Name';
+export default class WireGetRecord extends LightningElement {
+    @api recordId;
+    data;
+    error;
+    @wire(getRecord, { recordId: '$recordId', fields: [ACCOUNT_NAME_FIELD] })
+    wiredAccount({data, error}) {
+        console.log('Execute logic each time a new value is provisioned');
+        if (data) {
+            this.data = data;
+            this.error = undefined;
+        } else if (error) {
+            this.error = error;
+            this.data = undefined;
+        }
+    }
+}
+
+
+import { LightningElement} from 'lwc';
+import { createRecord } from 'lightning/uiRecordApi';
+import ACCOUNT_OBJECT from '@salesforce/schema/Account';
+import ACCOUNT_NAME_FIELD from '@salesforce/schema/Account.Name';
+export default class LdsCreateRecord extends LightningElement {
+    handleButtonClick() {
+        const recordInput = {
+            apiName: ACCOUNT_OBJECT.objectApiName,
+            fields: {
+                [ACCOUNT_NAME_FIELD.fieldApiName] : 'ACME'
+            }
+        };
+        createRecord(recordInput)
+            .then(account => {
+                // code to execute if create operation is successful
+            })
+            .catch(error => {
+                // code to execute if create operation is not successful
+            });
+    }
+}
+
+------------------------------------------------------------------------------------------------------
+
+
+public with sharing class AccountController {
+    @AuraEnabled(cacheable=true)
+    public static List<Contact> getRelatedContacts(Id accountId) {
+        return [
+            SELECT Name, Title, Email, Phone
+            FROM Contact
+            WHERE AccountId = :accountId
+            WITH SECURITY_ENFORCED
+       ];
+    }
+}
+
+
+
+
+import { LightningElement, api, wire } from 'lwc';
+import getRelatedContacts from '@salesforce/apex/AccountController.getRelatedContacts';
+export default class WireApexProperty extends LightningElement {
+    @api recordId;
+    @wire(getRelatedContacts, { accountId: '$recordId' })
+    contacts;
+}
+
+
+Call Apex Imperatively
+An alternative to calling Apex with @wire is to call Apex imperatively. 
+Call Apex imperatively when you need to control the invocation of read operations, 
+and when you modify records. To call Apex imperatively, you invoke Apex one time from a component’s 
+JavaScript file instead of delegating control to the Lightning Web Components engine. 
+In return, you get a JavaScript promise (as you do when you call an LDS function imperatively).
+
+
+import { LightningElement, api, wire } from 'lwc';
+import getRelatedContacts from '@salesforce/apex/AccountController.getRelatedContacts';
+export default class CallApexImperative extends LightningElement {
+    @api recordId;
+    handleButtonClick() {
+        getRelatedContacts({ //imperative Apex call
+            accountId: '$recordId'
+        })
+            .then(contacts => {
+                //code to execute if related contacts are returned successfully
+            })
+            .catch(error => {
+                //code to execute if related contacts are not returned successfully
+            });
+    }
+}
+
+-----------------------------------------------------------------------------------------------------------------
+<template>
+    <template if:true={errors}>
+        <p>{errors}</p>
+    </template>
+</template>
+
+import { LightningElement, api, wire } from 'lwc';
+import { reduceErrors } from 'c/ldsUtils';
+import getRelatedContacts from '@salesforce/apex/AccountController.getRelatedContacts';
+export default class WireApexProperty extends LightningElement {
+    @api recordId;
+    @wire(getRelatedContacts, { accountId: '$recordId' })
+    contacts;
+    get errors() {
+        return (this.contacts.error) ?
+            reduceErrors(this.contacts.error) : [];
+    }
+}
+
+import { LightningElement, api, wire } from 'lwc';
+import { reduceErrors } from 'c/ldsUtils';
+import getRelatedContacts from '@salesforce/apex/AccountController.getRelatedContacts';
+export default class WireApexFunction extends LightningElement {
+    @api recordId;
+    errors;
+    @wire(getRelatedContacts, { accountId: '$recordId' })
+    wiredContacts({data, error}) {
+        if (error)
+            this.errors = reduceErrors(error);
+    }
+}
